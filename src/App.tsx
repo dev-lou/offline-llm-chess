@@ -23,9 +23,12 @@ export type Difficulty = "easy" | "medium" | "hard";
 export default function App() {
   const [appState, setAppState] = useState<"landing" | "playing">("landing");
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
+  const [aiUrl, setAiUrl] = useState("http://192.168.1.118:1234/v1/chat/completions");
+  const [aiModel, setAiModel] = useState("phi-4-mini-instruct");
+
   const { state, makeMove, makeUciMove, reset, undo, allLegalMoves } = useChessGame();
   const spells = useSpells();
-  const { getMove, thinking, lastError } = useAI(difficulty);
+  const { getMove, thinking, lastError } = useAI(difficulty, aiUrl, aiModel);
   const audio = useAudio();
   const [aiError, setAiError] = useState<string | null>(null);
   const [gameOverOpen, setGameOverOpen] = useState(false);
@@ -100,7 +103,7 @@ export default function App() {
 
   // AI turn
   useEffect(() => {
-    if (state.turn !== "b" || gameOver || thinking) return;
+    if (state.turn !== "b" || gameOver || thinking || !!spells.animEvent) return;
     let cancelled = false;
     (async () => {
       const legalMovesVerbose = allLegalMoves();
@@ -240,7 +243,7 @@ export default function App() {
     setViewPly(null);
   };
 
-  const boardDisabled = state.turn !== "w" || gameOver || thinking || isReplayMode;
+  const boardDisabled = state.turn !== "w" || gameOver || thinking || isReplayMode || !!spells.animEvent;
 
   const moveHistoryEntries: MoveHistoryEntry[] = state.history.map((m, i) => ({
     move: m,
@@ -260,6 +263,10 @@ export default function App() {
   if (appState === "landing") {
     return (
       <LandingPage
+        aiUrl={aiUrl}
+        setAiUrl={setAiUrl}
+        aiModel={aiModel}
+        setAiModel={setAiModel}
         onStart={(diff) => {
           setDifficulty(diff);
           handleNewGame();

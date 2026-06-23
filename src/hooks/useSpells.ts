@@ -184,38 +184,7 @@ export function useSpells() {
       const result = applySpell(spellId, ctx, target);
       caster.mp -= base.spell.cost;
 
-      // Apply damage
-      for (const d of result.damage) {
-        const p = s.pieces[d.pieceId];
-        if (!p) continue;
-        p.hp = Math.max(0, p.hp - d.amount);
-        if (p.hp === 0 && !p.wounded) {
-          p.wounded = true;
-          pushLog({ ply: plyAfter, type: "death", text: `${nameOf(p)} is wounded!`, color: p.color });
-        }
-      }
-      // Apply heals
-      for (const h of result.heals) {
-        const p = s.pieces[h.pieceId];
-        if (!p) continue;
-        p.hp = Math.min(p.maxHp, p.hp + h.amount);
-        if (p.wounded && p.hp > 0) p.wounded = false;
-      }
-      // Apply stuns
-      for (const st of result.stuns) {
-        const p = s.pieces[st.pieceId];
-        if (!p) continue;
-        if (p.type === "k") continue; // King immune
-        p.stunnedTurns = Math.max(p.stunnedTurns, 2); // lasts through their next move
-      }
-      // Teleport: update squareToId
-      if (result.teleport) {
-        delete s.squareToId[result.teleport.from];
-        s.squareToId[result.teleport.to] = result.teleport.pieceId;
-      }
-
-      pushLog({ ply: plyAfter, type: "spell", text: result.flavor, color: caster.color });
-
+      // Create animation event immediately
       const ev: SpellEvent = {
         id: ++eventIdRef.current,
         spellId,
@@ -225,11 +194,59 @@ export function useSpells() {
         ply: plyAfter,
       };
       setAnimEvent(ev);
-      // Clear animation after a moment
-      setTimeout(() => setAnimEvent((cur) => (cur && cur.id === ev.id ? null : cur)), 1200);
 
-      // Snapshot the spell-modified state on top of the existing move snapshot
-      historyRef.current[historyRef.current.length - 1] = clone(s);
+      // Snapshot before damage application so history isn't corrupted
+      const currentHistoryIdx = historyRef.current.length - 1;
+
+      const applyEffects = () => {
+        // Apply damage
+        for (const d of result.damage) {
+          const p = s.pieces[d.pieceId];
+          if (!p) continue;
+          p.hp = Math.max(0, p.hp - d.amount);
+          if (p.hp === 0 && !p.wounded) {
+            p.wounded = true;
+            pushLog({ ply: plyAfter, type: "death", text: `${nameOf(p)} is wounded!`, color: p.color });
+          }
+        }
+        // Apply heals
+        for (const h of result.heals) {
+          const p = s.pieces[h.pieceId];
+          if (!p) continue;
+          p.hp = Math.min(p.maxHp, p.hp + h.amount);
+          if (p.wounded && p.hp > 0) p.wounded = false;
+        }
+        // Apply stuns
+        for (const st of result.stuns) {
+          const p = s.pieces[st.pieceId];
+          if (!p) continue;
+          if (p.type === "k") continue; // King immune
+          p.stunnedTurns = Math.max(p.stunnedTurns, 2); // lasts through their next move
+        }
+        // Teleport: update squareToId
+        if (result.teleport) {
+          delete s.squareToId[result.teleport.from];
+          s.squareToId[result.teleport.to] = result.teleport.pieceId;
+        }
+
+        pushLog({ ply: plyAfter, type: "spell", text: result.flavor, color: caster.color });
+
+        // Update the snapshot with the applied effects
+        historyRef.current[currentHistoryIdx] = clone(s);
+        rerender();
+      };
+
+      // Delay state updates if it's the meteor spell so the impact syncs with animation
+      if (spellId === "meteor") {
+        setTimeout(applyEffects, 1100);
+      } else {
+        applyEffects();
+      }
+
+      // Clear animation after a moment
+      setTimeout(() => setAnimEvent((cur) => (cur && cur.id === ev.id ? null : cur)), 1400);
+
+      historyRef.current[currentHistoryIdx] = clone(s);
       rerender();
       return result;
     },

@@ -1,8 +1,6 @@
 import { useCallback, useState } from "react";
 import { PIECE_BASE, type PieceState } from "@/lib/pieceStats";
 
-const LM_STUDIO_URL = "http://localhost:1234/v1/chat/completions";
-const MODEL = "qwen3-4b";
 
 export interface AiContext {
   fen: string;
@@ -51,13 +49,13 @@ function extractSpell(
   const caster = m[1].toLowerCase();
   const spellId = m[2].toLowerCase();
   const target = m[3].toLowerCase();
-  const entry = available.find((a) => a.caster === caster && a.spellId === spellId);
-  if (!entry) return null;
-  if (!entry.validTargets.includes(target)) return null;
+
+  const valid = available.find((a) => a.caster === caster && a.spellId === spellId);
+  if (!valid || !valid.validTargets.includes(target)) return null;
   return { caster, spellId, target };
 }
 
-export function useAI(difficulty: "easy" | "medium" | "hard" = "medium") {
+export function useAI(difficulty: "easy" | "medium" | "hard" = "medium", aiUrl: string, aiModel: string) {
   const [thinking, setThinking] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
 
@@ -116,11 +114,11 @@ export function useAI(difficulty: "easy" | "medium" | "hard" = "medium") {
 
         let content = "";
         try {
-          const res = await fetch(LM_STUDIO_URL, {
+          const res = await fetch(aiUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              model: MODEL,
+              model: aiModel,
               messages: [
                 { role: "system", content: system },
                 { role: "user", content: "Your response:" },
@@ -156,7 +154,7 @@ export function useAI(difficulty: "easy" | "medium" | "hard" = "medium") {
     } finally {
       setThinking(false);
     }
-  }, [lastError, difficulty]);
+  }, [lastError, difficulty, aiUrl, aiModel]);
 
   return { getMove, thinking, lastError };
 }

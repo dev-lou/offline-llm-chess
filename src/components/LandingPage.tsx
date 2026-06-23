@@ -5,11 +5,16 @@ import { AmbientParticles } from "./AmbientParticles";
 
 interface LandingPageProps {
   onStart: (difficulty: Difficulty) => void;
+  aiUrl: string;
+  setAiUrl: (url: string) => void;
+  aiModel: string;
+  setAiModel: (model: string) => void;
 }
 
-export function LandingPage({ onStart }: LandingPageProps) {
+export function LandingPage({ onStart, aiUrl, setAiUrl, aiModel, setAiModel }: LandingPageProps) {
   const [selectedDiff, setSelectedDiff] = useState<Difficulty>("medium");
   const [activePieceTab, setActivePieceTab] = useState<string>("q");
+  const [showSettings, setShowSettings] = useState(false);
 
   const pieceList = [
     { type: "p", icon: "♙", label: "Pawn" },
@@ -29,7 +34,7 @@ export function LandingPage({ onStart }: LandingPageProps) {
         <AmbientParticles particleCount={150} />
       </div>
 
-      <div className="max-w-3xl w-full z-10 flex flex-col items-center gap-12 pt-8 pb-16">
+      <div className="max-w-3xl w-full z-10 flex flex-col items-center gap-8 pt-8 pb-16">
         
         {/* Title Section */}
         <div className="text-center space-y-2">
@@ -40,6 +45,40 @@ export function LandingPage({ onStart }: LandingPageProps) {
             Next-Generation RPG Chess Engine
           </p>
         </div>
+
+        {/* Settings Toggle */}
+        <button
+          onClick={() => setShowSettings(!showSettings)}
+          className="text-[10px] text-cyan-500 hover:text-cyan-300 uppercase tracking-widest border border-cyan-900/50 bg-slate-900/40 px-3 py-1 rounded-full transition-colors"
+        >
+          {showSettings ? "Hide Settings" : "⚙️ AI Settings"}
+        </button>
+
+        {/* AI Settings Panel */}
+        {showSettings && (
+          <div className="w-full max-w-md bg-slate-900/60 border border-cyan-900/50 p-4 rounded backdrop-blur-md space-y-3 animate-in fade-in zoom-in-95 duration-200">
+            <div className="space-y-1">
+              <label className="text-[10px] text-cyan-400 uppercase tracking-widest">Local AI Endpoint URL</label>
+              <input
+                type="text"
+                value={aiUrl}
+                onChange={(e) => setAiUrl(e.target.value)}
+                className="w-full bg-black/50 border border-slate-700 rounded px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                placeholder="http://192.168.1.118:1234/v1/chat/completions"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] text-cyan-400 uppercase tracking-widest">Model Name</label>
+              <input
+                type="text"
+                value={aiModel}
+                onChange={(e) => setAiModel(e.target.value)}
+                className="w-full bg-black/50 border border-slate-700 rounded px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                placeholder="phi-4-mini-instruct"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Difficulty Selection */}
         <div className="flex flex-col items-center gap-4 w-full max-w-sm">
